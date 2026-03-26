@@ -1,0 +1,52 @@
+# Web Framework
+fastapi==0.135.2
+uvicorn==0.42.0
+starlette==1.0.0
+pydantic==2.12.5
+pydantic-core==2.41.5
+
+# Machine Learning / Transformers
+git+https://github.com/TransformerLensOrg/TransformerLens@589acd47c7a4e100754f16a840f73229d56e8196
+transformers==4.57.6
+torch==2.11.0
+accelerate==1.13.0
+datasets==4.8.4
+tokenizers==0.22.2
+safetensors==0.7.0
+huggingface-hub==0.36.2
+
+# Data Processing
+numpy==2.4.3
+pandas==3.0.1
+einops==0.8.2
+fancy-einsum==0.0.3
+
+# Type Checking & Validation
+beartype==0.14.1
+jaxtyping==0.3.9
+typing-extensions==4.15.0
+typeguard==4.5.1
+annotated-types==0.7.0
+
+# Utilities
+python-dotenv==1.2.2
+requests==2.32.5
+aiohttp==3.13.3
+httpx==0.28.1
+anyio==4.13.0
+click==8.3.1
+tqdm==4.67.3
+rich==14.3.3
+
+# Additional Dependencies
+sentencepiece==0.2.1
+protobuf==6.33.6
+regex==2026.2.28
+PyYAML==6.0.3
+Jinja2==3.1.6
+GitPython==3.1.46
+filelock==3.25.2
+fsspec==2026.2.0
+packaging==26.0
+
+# Note: Many additional dependencies will be installed automatically as sub-dependencies
