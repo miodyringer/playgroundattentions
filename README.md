@@ -4,7 +4,7 @@ Clone the repository from GitHub.
 
 ```
 git clone https://github.com/miodyringer/playgroundattentions.git
-cd PlaygroundAttentions
+cd playgroundattentions
 ```
 
 Create a virtual environment.
@@ -20,13 +20,7 @@ Install all dependencies.
 pip install -r requirements.txt
 ```
 
-Configure environment in **.env**. **HF_TOKEN** only necessary when using a mistral model. Compatible models are listed on https://transformerlensorg.github.io/TransformerLens/generated/model_properties_table.html
-
-```
-HF_TOKEN="..."
-MODEL_NAME="..."
-COMPARE_MODEL="..."
-```
+Configure environment in `.env` (example in `.env.example`). `HF_TOKEN` only necessary when using a mistral model. Compatible models are listed on https://transformerlensorg.github.io/TransformerLens/generated/model_properties_table.html
 
 Run the application and open index.html in your browser.
 ```
