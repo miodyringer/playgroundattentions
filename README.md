@@ -4,7 +4,7 @@ Clone the repository from GitHub.
 
 ```
 git clone https://github.com/miodyringer/playgroundattentions.git
-cd PlaygroundAttentions
+cd playgroundattentions
 ```
 
 Create a virtual environment.
