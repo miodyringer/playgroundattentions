@@ -1,6 +1,9 @@
 # Environment variables (contains sensitive tokens)
 .env
 
+# Auto-generated frontend config
+frontend/js/config.js
+
 # Python
 __pycache__/
 *.py[cod]
