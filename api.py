@@ -21,12 +21,15 @@ if "mistral" in model_name and os.getenv("HF_TOKEN") is None:
 device = utils.get_device()
 model = HookedTransformer.from_pretrained(model_name, device=device)
 
-# Load comparison model if specified
+# Load comparison model only if COMPARE_MODEL is set and not empty
 compare_model = None
-if compare_model_name:
+if compare_model_name and compare_model_name.strip():
+    print(f"Loading comparison model: {compare_model_name}")
     if "mistral" in compare_model_name and os.getenv("HF_TOKEN") is None:
         raise ValueError("Mistral models require HF_TOKEN environment variable to be set in .env file")
     compare_model = HookedTransformer.from_pretrained(compare_model_name, device=device)
+else:
+    print("No comparison model specified. Model comparison feature will be disabled.")
 
 
 app = FastAPI(title="Attention Capture API", version="1.0.0")
