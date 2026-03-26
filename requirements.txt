@@ -4,6 +4,7 @@ uvicorn==0.42.0
 starlette==1.0.0
 pydantic==2.12.5
 pydantic-core==2.41.5
+python-multipart==0.0.20
 
 # Machine Learning / Transformers
 git+https://github.com/TransformerLensOrg/TransformerLens@589acd47c7a4e100754f16a840f73229d56e8196
@@ -48,5 +49,8 @@ GitPython==3.1.46
 filelock==3.25.2
 fsspec==2026.2.0
 packaging==26.0
+
+# PDF Processing
+PyPDF2==3.0.1
 
 # Note: Many additional dependencies will be installed automatically as sub-dependencies

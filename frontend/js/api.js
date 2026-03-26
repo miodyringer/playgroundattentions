@@ -4,7 +4,7 @@ const API_BASE_URL = (typeof API_CONFIG !== 'undefined') ? API_CONFIG.baseUrl : 
 
 
 // API call for text generation
-async function callGenerateAPI(prompt, temperature, maxTokens) {
+async function callGenerateAPI(prompt, temperature, maxTokens, documentContext = null) {
     const response = await fetch(`${API_BASE_URL}/generate`, {
         method: 'POST',
         headers: {
@@ -13,7 +13,8 @@ async function callGenerateAPI(prompt, temperature, maxTokens) {
         body: JSON.stringify({
             prompt: prompt,
             temperature: temperature,
-            max_tokens: maxTokens
+            max_tokens: maxTokens,
+            document_context: documentContext
         })
     });
 

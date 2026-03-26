@@ -27,8 +27,23 @@
                 <h2>Text Generation</h2>
                 <div class="error" id="generate-error"></div>
 
+                <!-- File Upload Section -->
                 <div class="form-group">
-                    <label for="prompt">Prompt</label>
+                    <div class="upload-section">
+                        <input type="file" id="file-input" accept=".txt,.md,.pdf,.py,.js,.java,.cpp,.html,.css" style="display: none;" />
+                        <div id="file-upload-area" class="upload-area" onclick="document.getElementById('file-input').click()">
+                            <p>📁 Click or drag & drop to upload</p>
+                            <p class="file-hint">Supported: txt, md, pdf, code files</p>
+                        </div>
+                        <div id="file-info" style="display: none;">
+                            <p>📄 <strong id="filename"></strong></p>
+                            <p><span id="file-size"></span> | <span id="file-tokens"></span> tokens</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label for="prompt">Prompt (document context will be added above)</label>
                     <textarea id="prompt" placeholder="Enter your prompt here..."></textarea>
                 </div>
 
@@ -69,6 +84,7 @@
 
                 <div class="form-group">
                     <label for="analyze-text">Text to Analyze</label>
+                    <div id="analyze-text-structured" style="display: none;"></div>
                     <textarea id="analyze-text" placeholder="Enter text to analyze or use generated text from the Generate tab..."></textarea>
                 </div>
 

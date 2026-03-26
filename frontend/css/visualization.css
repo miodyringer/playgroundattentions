@@ -479,3 +479,148 @@
         height: 16px;
     }
 }
+
+/* File Upload Styles */
+
+.upload-section {
+    margin-bottom: 1rem;
+}
+
+.upload-area {
+    border: 2px dashed var(--border-color);
+    border-radius: 8px;
+    padding: 2rem;
+    text-align: center;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    background-color: var(--bg-secondary);
+}
+
+.upload-area:hover {
+    border-color: var(--accent-color);
+    background-color: var(--bg-tertiary);
+}
+
+.upload-area.dragover {
+    border-color: var(--accent-color);
+    background-color: var(--bg-tertiary);
+    transform: scale(1.02);
+}
+
+.file-hint {
+    font-size: 0.85rem;
+    color: var(--text-secondary);
+    margin-top: 0.5rem;
+}
+
+#file-info {
+    padding: 1rem;
+    background-color: var(--bg-tertiary);
+    border-radius: 6px;
+    margin-top: 1rem;
+}
+
+#file-info p {
+    margin: 0.5rem 0;
+}
+
+/* Structured Output Display */
+
+.context-section,
+.prompt-section,
+.response-section {
+    margin-bottom: 1rem;
+    padding: 0.75rem;
+    border-radius: 6px;
+    border-left: 3px solid;
+}
+
+.context-section {
+    background-color: var(--bg-tertiary);
+    border-left-color: #6366f1; /* Indigo */
+}
+
+.prompt-section {
+    background-color: var(--bg-secondary);
+    border-left-color: #8b5cf6; /* Purple */
+}
+
+.response-section {
+    background-color: var(--bg-tertiary);
+    border-left-color: #10b981; /* Green */
+}
+
+.section-label {
+    font-weight: 600;
+    font-size: 0.8rem;
+    color: var(--text-secondary);
+    margin-bottom: 0.5rem;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.context-preview {
+    font-size: 0.9rem;
+    color: var(--text-primary);
+    line-height: 1.5;
+    white-space: pre-wrap;
+    font-family: 'Inter', monospace;
+}
+
+.context-preview.collapsed {
+    max-height: 3rem;
+    overflow: hidden;
+    position: relative;
+}
+
+.prompt-text,
+.response-text {
+    font-size: 0.9rem;
+    color: var(--text-primary);
+    line-height: 1.5;
+    white-space: pre-wrap;
+}
+
+.expand-button {
+    margin-top: 0.5rem;
+    padding: 0.3rem 0.6rem;
+    font-size: 0.75rem;
+    background-color: var(--bg-primary);
+    color: var(--text-primary);
+    border: 1px solid var(--border-color);
+    border-radius: 4px;
+    cursor: pointer;
+    transition: all 0.2s;
+    display: block;
+}
+
+.expand-button:hover {
+    background-color: var(--accent-color);
+    color: white;
+    border-color: var(--accent-color);
+}
+
+/* Token Section Display in Visualizations */
+
+.token-section-wrapper {
+    margin-bottom: 0.75rem;
+    padding: 0.75rem;
+    background-color: var(--bg-tertiary);
+    border-radius: 6px;
+    border-left: 3px solid #10b981; /* Green */
+}
+
+.token-section-label {
+    font-weight: 600;
+    font-size: 0.8rem;
+    color: var(--text-secondary);
+    margin-bottom: 0.5rem;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.token-section-content {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.25rem;
+}

@@ -1,6 +1,9 @@
 // Global state
 let currentGeneratedText = '';
+let currentGeneratedResponse = ''; // Store only the response part
 let currentAttentionData = null;
+let uploadedDocumentContext = ''; // Store uploaded document separately
+let currentAnalyzedTextStructure = null; // Store structure of analyzed text
 
 // Auto-resize textarea
 function autoResizeTextarea(textarea) {
@@ -19,6 +22,9 @@ window.addEventListener('DOMContentLoaded', () => {
         });
         // Don't initialize height on load - let CSS handle it
     });
+
+    // Initialize file upload
+    setupFileUpload();
 });
 
 // Tab switching
@@ -38,12 +44,12 @@ function switchTab(tabName) {
 
 // Generate text
 async function generateText() {
-    const prompt = document.getElementById('prompt').value.trim();
+    const userPrompt = document.getElementById('prompt').value.trim();
     const temperature = parseFloat(document.getElementById('temperature').value);
     const maxTokens = parseInt(document.getElementById('max-tokens').value);
 
-    if (!prompt) {
-        showError('generate-error', 'Please enter a prompt');
+    if (!userPrompt && !uploadedDocumentContext) {
+        showError('generate-error', 'Please enter a prompt or upload a document');
         return;
     }
 
@@ -51,19 +57,54 @@ async function generateText() {
     document.getElementById('generate-loading').classList.add('active');
     document.getElementById('generate-output-card').style.display = 'none';
 
-    try {
-        const data = await callGenerateAPI(prompt, temperature, maxTokens);
-        currentGeneratedText = data.answer;
+    // Scroll to loading spinner immediately
+    setTimeout(() => {
+        document.getElementById('generate-loading').scrollIntoView({
+            behavior: 'smooth',
+            block: 'center'
+        });
+    }, 100);
 
-        document.getElementById('generated-text').textContent = data.answer;
+    try {
+        // Send document context separately to backend
+        const data = await callGenerateAPI(userPrompt, temperature, maxTokens, uploadedDocumentContext);
+        currentGeneratedText = data.answer;
+        currentGeneratedResponse = data.metadata.new_text; // Store only the new response tokens
+
+        // Display output with sections if document context exists
+        const outputBox = document.getElementById('generated-text');
+        outputBox.innerHTML = ''; // Clear previous content
+
+        if (data.metadata.has_document_context) {
+            // Create structured display
+            const contextSection = document.createElement('div');
+            contextSection.className = 'context-section';
+            contextSection.innerHTML = `<div class="section-label">Document Context (${data.metadata.context_token_count} tokens)</div><div class="context-preview collapsed">${truncateText(uploadedDocumentContext, 150)}</div><button class="expand-button" onclick="toggleContextPreview(this)">Show full context</button>`;
+            outputBox.appendChild(contextSection);
+
+            const promptSection = document.createElement('div');
+            promptSection.className = 'prompt-section';
+            promptSection.innerHTML = `<div class="section-label">Your Question (${data.metadata.user_prompt_token_count} tokens)</div><div class="prompt-text">${userPrompt}</div>`;
+            outputBox.appendChild(promptSection);
+
+            const responseSection = document.createElement('div');
+            responseSection.className = 'response-section';
+            responseSection.innerHTML = `<div class="section-label">Model Response (${data.metadata.generated_tokens} tokens)</div><div class="response-text">${currentGeneratedResponse}</div>`;
+            outputBox.appendChild(responseSection);
+        } else {
+            // Simple display for non-context generations
+            outputBox.textContent = data.answer;
+            currentGeneratedResponse = data.answer;
+        }
 
         const metadata = data.metadata;
         document.getElementById('generate-metadata').innerHTML = `
             <div class="metadata-item"><strong>Model:</strong> ${data.model}</div>
             <div class="metadata-item"><strong>Temperature:</strong> ${metadata.temperature}</div>
-            <div class="metadata-item"><strong>Max New Tokens:</strong> ${metadata.max_tokens}</div>
-            <div class="metadata-item"><strong>Prompt Tokens:</strong> ${metadata.prompt_tokens}</div>
-            <div class="metadata-item"><strong>Generated Tokens:</strong> ${metadata.generated_tokens}</div>
+            <div class="metadata-item"><strong>Total Tokens:</strong> ${metadata.total_tokens}</div>
+            ${metadata.has_document_context ? `<div class="metadata-item"><strong>Context:</strong> ${metadata.context_token_count} tokens</div>` : ''}
+            ${metadata.has_document_context ? `<div class="metadata-item"><strong>Question:</strong> ${metadata.user_prompt_token_count} tokens</div>` : ''}
+            <div class="metadata-item"><strong>Response:</strong> ${metadata.generated_tokens} tokens</div>
         `;
 
         document.getElementById('generate-output-card').style.display = 'block';
@@ -77,9 +118,50 @@ async function generateText() {
 // Use generated text in visualization tab
 function useGeneratedText() {
     const analyzeTextarea = document.getElementById('analyze-text');
-    analyzeTextarea.value = currentGeneratedText;
+    const structuredDiv = document.getElementById('analyze-text-structured');
 
-    // Switch tabs first so the textarea is visible
+    // Carry over the text structure for visualization
+    if (uploadedDocumentContext) {
+        currentAnalyzedTextStructure = {
+            hasContext: true,
+            documentContext: uploadedDocumentContext,
+            userPrompt: document.getElementById('prompt').value.trim(),
+            response: currentGeneratedResponse // Use only the response, not full text
+        };
+
+        // Hide textarea, show structured display
+        analyzeTextarea.style.display = 'none';
+        structuredDiv.style.display = 'block';
+        structuredDiv.innerHTML = '';
+
+        // Build structured sections
+        const contextSection = document.createElement('div');
+        contextSection.className = 'context-section';
+        contextSection.innerHTML = `<div class="section-label">Document Context</div><div class="context-preview collapsed">${truncateText(uploadedDocumentContext, 150)}</div><button class="expand-button" onclick="toggleAnalyzeContextPreview(this)">Show full context</button>`;
+        structuredDiv.appendChild(contextSection);
+
+        const promptSection = document.createElement('div');
+        promptSection.className = 'prompt-section';
+        promptSection.innerHTML = `<div class="section-label">User Question</div><div class="prompt-text">${currentAnalyzedTextStructure.userPrompt}</div>`;
+        structuredDiv.appendChild(promptSection);
+
+        const responseSection = document.createElement('div');
+        responseSection.className = 'response-section';
+        responseSection.innerHTML = `<div class="section-label">Model Response</div><div class="response-text">${currentGeneratedResponse}</div>`;
+        structuredDiv.appendChild(responseSection);
+
+        // Store full text in textarea (hidden) for analyze function
+        analyzeTextarea.value = currentGeneratedText;
+    } else {
+        currentAnalyzedTextStructure = null;
+        // Show textarea, hide structured display
+        analyzeTextarea.style.display = 'block';
+        structuredDiv.style.display = 'none';
+        analyzeTextarea.value = currentGeneratedText;
+        autoResizeTextarea(analyzeTextarea);
+    }
+
+    // Switch tabs first so the content is visible
     document.querySelectorAll('.tab').forEach((tab, index) => {
         tab.classList.remove('active');
         if (index === 1) tab.classList.add('active');
@@ -88,11 +170,6 @@ function useGeneratedText() {
         content.classList.remove('active');
         if (index === 1) content.classList.add('active');
     });
-
-    // Now resize after the textarea is visible
-    setTimeout(() => {
-        autoResizeTextarea(analyzeTextarea);
-    }, 0);
 }
 
 // Analyze text
@@ -148,4 +225,188 @@ function showError(elementId, message) {
 function hideError(elementId) {
     const errorElement = document.getElementById(elementId);
     errorElement.classList.remove('active');
+}
+
+// File upload functionality
+function setupFileUpload() {
+    const fileInput = document.getElementById('file-input');
+    const uploadArea = document.getElementById('file-upload-area');
+
+    if (!fileInput || !uploadArea) return;
+
+    // Click handler
+    fileInput.addEventListener('change', handleFileSelect);
+
+    // Drag and drop handlers
+    uploadArea.addEventListener('dragover', (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        uploadArea.classList.add('dragover');
+    });
+
+    uploadArea.addEventListener('dragleave', (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        uploadArea.classList.remove('dragover');
+    });
+
+    uploadArea.addEventListener('drop', (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        uploadArea.classList.remove('dragover');
+
+        const files = e.dataTransfer.files;
+        if (files.length > 0) {
+            handleFile(files[0]);
+        }
+    });
+}
+
+function handleFileSelect(e) {
+    const file = e.target.files[0];
+    if (file) {
+        handleFile(file);
+    }
+}
+
+async function handleFile(file) {
+    const filename = file.name;
+    const extension = filename.split('.').pop().toLowerCase();
+
+    try {
+        let text = '';
+
+        if (extension === 'pdf') {
+            // Send to backend for PDF extraction
+            text = await extractPDF(file);
+        } else if (['txt', 'md', 'py', 'js', 'java', 'cpp', 'html', 'css'].includes(extension)) {
+            // Read text files directly in browser
+            text = await readTextFile(file);
+        } else {
+            alert('Unsupported file type. Please use txt, md, pdf, or code files.');
+            return;
+        }
+
+        // Estimate token count (rough: ~4 chars per token)
+        const estimatedTokens = Math.ceil(text.length / 4);
+
+        // Warn if likely too long
+        if (estimatedTokens > 512) {
+            const proceed = confirm(
+                `This document has ~${estimatedTokens} tokens. ` +
+                `Performance is best with < 512 tokens. Continue anyway?`
+            );
+            if (!proceed) return;
+        }
+
+        // Update UI
+        document.getElementById('filename').textContent = filename;
+        document.getElementById('file-size').textContent = formatFileSize(file.size);
+        document.getElementById('file-tokens').textContent = `~${estimatedTokens}`;
+        document.getElementById('file-info').style.display = 'block';
+
+        // Store document context separately (don't put in prompt textarea)
+        uploadedDocumentContext = text;
+
+        // Optionally show a preview in a collapsed state or just show it's loaded
+        console.log('Document loaded:', filename, 'with', estimatedTokens, 'tokens');
+
+    } catch (error) {
+        alert('Error reading file: ' + error.message);
+    }
+}
+
+function readTextFile(file) {
+    return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = (e) => resolve(e.target.result);
+        reader.onerror = (e) => reject(new Error('Failed to read file'));
+        reader.readAsText(file);
+    });
+}
+
+async function extractPDF(file) {
+    const formData = new FormData();
+    formData.append('file', file);
+
+    const response = await fetch(`${API_BASE_URL}/extract_pdf`, {
+        method: 'POST',
+        body: formData
+    });
+
+    if (!response.ok) {
+        throw new Error(`PDF extraction failed: ${response.status}`);
+    }
+
+    const result = await response.json();
+    return result.text;
+}
+
+function formatFileSize(bytes) {
+    if (bytes < 1024) return bytes + ' B';
+    if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB';
+    return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
+}
+
+// Helper functions for context display
+function truncateText(text, maxLength) {
+    if (text.length <= maxLength) return text;
+    return text.substring(0, maxLength) + '...';
+}
+
+function toggleContextPreview(button) {
+    const preview = button.previousElementSibling;
+    if (preview.classList.contains('collapsed')) {
+        preview.classList.remove('collapsed');
+        preview.textContent = uploadedDocumentContext;
+        button.textContent = 'Hide full context';
+    } else {
+        preview.classList.add('collapsed');
+        preview.textContent = truncateText(uploadedDocumentContext, 150);
+        button.textContent = 'Show full context';
+    }
+}
+
+// Display analyzed text with structure
+function displayAnalyzedText() {
+    const container = document.getElementById('analyzed-text-display');
+    container.innerHTML = '';
+
+    if (currentAnalyzedTextStructure && currentAnalyzedTextStructure.hasContext) {
+        // Structured display with context
+        const contextSection = document.createElement('div');
+        contextSection.className = 'context-section';
+        contextSection.innerHTML = `<div class="section-label">Document Context</div><div class="context-preview collapsed">${truncateText(currentAnalyzedTextStructure.documentContext, 150)}</div><button class="expand-button" onclick="toggleAnalyzeContextPreview(this)">Show full context</button>`;
+        container.appendChild(contextSection);
+
+        const promptSection = document.createElement('div');
+        promptSection.className = 'prompt-section';
+        promptSection.innerHTML = `<div class="section-label">User Question</div><div class="prompt-text">${currentAnalyzedTextStructure.userPrompt}</div>`;
+        container.appendChild(promptSection);
+
+        const responseSection = document.createElement('div');
+        responseSection.className = 'response-section';
+        responseSection.innerHTML = `<div class="section-label">Model Response</div><div class="response-text">${currentAnalyzedTextStructure.response}</div>`;
+        container.appendChild(responseSection);
+    } else if (currentAttentionData && currentAttentionData.tokens) {
+        // Show the analyzed text even if no structure
+        const analyzedText = currentAttentionData.tokens.join('');
+        const textSection = document.createElement('div');
+        textSection.className = 'response-section';
+        textSection.innerHTML = `<div class="section-label">Analyzed Text (${currentAttentionData.num_tokens} tokens)</div><div class="response-text">${analyzedText}</div>`;
+        container.appendChild(textSection);
+    }
+}
+
+function toggleAnalyzeContextPreview(button) {
+    const preview = button.previousElementSibling;
+    if (preview.classList.contains('collapsed')) {
+        preview.classList.remove('collapsed');
+        preview.textContent = currentAnalyzedTextStructure.documentContext;
+        button.textContent = 'Hide full context';
+    } else {
+        preview.classList.add('collapsed');
+        preview.textContent = truncateText(currentAnalyzedTextStructure.documentContext, 150);
+        button.textContent = 'Show full context';
+    }
 }

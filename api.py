@@ -1,4 +1,4 @@
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from typing import Optional, Dict, Any
@@ -48,6 +48,7 @@ class GenerateRequest(BaseModel):
     prompt: str
     temperature: Optional[float] = 0.7
     max_tokens: Optional[int] = 100
+    document_context: Optional[str] = None  # Separate field for document context
 
 
 class GenerateResponse(BaseModel):
@@ -76,8 +77,45 @@ async def root():
 @app.post("/generate", response_model=GenerateResponse)
 async def generate_answer(request: GenerateRequest):
     try:
-        # Tokenize the prompt
-        tokens = model.to_tokens(request.prompt)
+        # Build full prompt with document context if provided
+        if request.document_context:
+            full_content = request.document_context + "\n\n" + request.prompt
+        else:
+            full_content = request.prompt
+
+        # Token boundary tracking
+        context_token_count = 0
+        prompt_token_count = 0
+
+        # Check if model is an instruct model and apply chat template
+        if "instruct" in model_name.lower() or "chat" in model_name.lower():
+            # Format as chat messages for instruct models
+            messages = [
+                {"role": "user", "content": full_content}
+            ]
+            # Apply the model's chat template
+            formatted_prompt = model.tokenizer.apply_chat_template(
+                messages,
+                tokenize=False,
+                add_generation_prompt=True
+            )
+
+            # Track token boundaries for visualization
+            if request.document_context:
+                context_tokens = model.to_tokens(request.document_context)
+                context_token_count = context_tokens.shape[1]
+            prompt_tokens = model.to_tokens(request.prompt)
+            prompt_token_count = prompt_tokens.shape[1]
+
+            # Tokenize the full formatted prompt
+            tokens = model.to_tokens(formatted_prompt)
+        else:
+            # Regular tokenization for base models
+            tokens = model.to_tokens(full_content)
+            if request.document_context:
+                context_tokens = model.to_tokens(request.document_context)
+                context_token_count = context_tokens.shape[1]
+
         prompt_length = tokens.shape[1]
 
         # Generate tokens
@@ -108,7 +146,10 @@ async def generate_answer(request: GenerateRequest):
                 "prompt_tokens": int(prompt_length),
                 "generated_tokens": int(actual_new_tokens),
                 "new_text": new_answer,
-                "total_tokens": int(total_length)
+                "total_tokens": int(total_length),
+                "context_token_count": int(context_token_count),
+                "user_prompt_token_count": int(prompt_token_count),
+                "has_document_context": request.document_context is not None
             }
         )
     except Exception as e:
@@ -233,6 +274,28 @@ async def get_models():
         "primary_model": model_name,
         "compare_model": compare_model_name
     }
+
+
+@app.post("/extract_pdf")
+async def extract_pdf(file: UploadFile):
+    """Extract text from PDF file"""
+    if not file.filename.endswith('.pdf'):
+        raise HTTPException(status_code=400, detail="Only PDF files supported")
+
+    try:
+        import PyPDF2
+        import io
+
+        content = await file.read()
+        pdf_reader = PyPDF2.PdfReader(io.BytesIO(content))
+
+        text = ""
+        for page in pdf_reader.pages:
+            text += page.extract_text() + "\n"
+
+        return {"text": text, "pages": len(pdf_reader.pages)}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"PDF extraction failed: {str(e)}")
 
 
 if __name__ == "__main__":

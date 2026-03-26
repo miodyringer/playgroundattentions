@@ -794,6 +794,14 @@ function renderTokens(tokens) {
 
     container.innerHTML = '';
 
+    // Check if we have structured text to display
+    if (currentAnalyzedTextStructure && currentAnalyzedTextStructure.hasContext) {
+        // Render structured sections instead of plain token list
+        renderStructuredTokenDisplay(container, tokens);
+        return;
+    }
+
+    // Original token rendering with drag selection
     let isDragging = false;
     let startIdx = null;
 
@@ -1412,6 +1420,69 @@ function calculateIncomingAttention(attentionMatrix, numTokens) {
     }
 
     return scores;
+}
+
+// Render structured token display with sections
+function renderStructuredTokenDisplay(container, allTokens) {
+    container.innerHTML = '';
+    container.style.display = 'block';
+
+    // We need to split tokens based on the original structure
+    // For now, just display all tokens as response since we have the full generated text
+    const responseSection = document.createElement('div');
+    responseSection.className = 'token-section-wrapper';
+
+    // Add section label
+    const label = document.createElement('div');
+    label.className = 'token-section-label';
+    label.textContent = 'Full Text (click and drag to select)';
+    responseSection.appendChild(label);
+
+    // Add tokens container
+    const tokensContainer = document.createElement('div');
+    tokensContainer.className = 'token-section-content';
+    responseSection.appendChild(tokensContainer);
+
+    container.appendChild(responseSection);
+
+    // Render tokens with drag selection in the section
+    let isDragging = false;
+    let startIdx = null;
+
+    allTokens.forEach((token, idx) => {
+        const span = document.createElement('span');
+        span.className = 'token';
+        span.textContent = token;
+        span.dataset.index = idx;
+
+        span.addEventListener('mousedown', (e) => {
+            e.preventDefault();
+            isDragging = true;
+            startIdx = idx;
+            visualizationState.tokenRange = { start: idx, end: idx };
+            updateTokenSelection();
+        });
+
+        span.addEventListener('mouseenter', () => {
+            if (isDragging) {
+                const endIdx = idx;
+                visualizationState.tokenRange = {
+                    start: Math.min(startIdx, endIdx),
+                    end: Math.max(startIdx, endIdx)
+                };
+                updateTokenSelection();
+            }
+        });
+
+        tokensContainer.appendChild(span);
+    });
+
+    document.addEventListener('mouseup', () => {
+        if (isDragging) {
+            isDragging = false;
+            updateTokenImportance();
+        }
+    });
 }
 
 // Render tokens with colors based on attention scores
